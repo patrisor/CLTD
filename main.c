@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
-//#include <ctype.h>
+#include <ctype.h>
+#include <string.h>
 
 /* * * * * * * * * * * * * * * * * * * * * */
 /* * * * * * * * * * * * * * * * * * * * * */
@@ -25,6 +26,12 @@ typedef struct s_player
 /* * * * * * * * * * * * * * * * * * * * * */
 /* * * * * * * * * * * * * * * * * * * * * */
 
+void die(char inp)
+{
+	if (inp == 'q')
+		exit(-1);
+}
+
 void garbage_collect(int ***g, t_player **p)
 {
   for(int i = 0; i < GRID_HEIGHT; i++)
@@ -33,7 +40,7 @@ void garbage_collect(int ***g, t_player **p)
   free(*p);
 }
 
-int strlen(char *str)
+int ft_strlen(char *str)
 {
   int ret;
 
@@ -41,38 +48,6 @@ int strlen(char *str)
   while(str[ret])
     ret++;
   return(ret);
-}
-
-/* * * * * * * * * * * * * * * * * * * * * */
-/* * * * * * * * * * * * * * * * * * * * * */
-/* * * * * * * * * * MAP * * * * * * * * * */
-/* * * * * * * * * * * * * * * * * * * * * */
-/* * * * * * * * * * * * * * * * * * * * * */
-
-int **initGrid()
-{
-  int **ret;
-
-  if ((ret = (int **)malloc(sizeof(int*) * GRID_HEIGHT)) == NULL)
-    return(NULL);
-  for(int i = 0; i < GRID_HEIGHT; i++)
-  {
-    ret[i] = (int *)malloc(sizeof(int) * GRID_WIDTH);
-    for (int j = 0; j < GRID_WIDTH; j++)
-      ret[i][j] = 0;
-  }
-  return(ret);
-}
-
-// TODO: Update
-void printGrid(int **grid)
-{
-  for(int r = 0; r < GRID_HEIGHT; r++)
-  {
-    for(int c = 0; c < GRID_WIDTH; c++)
-      printf("%d ", grid[r][c]);
-    printf("\n");
-  }
 }
 
 /* * * * * * * * * * * * * * * * * * * * * */
@@ -93,6 +68,18 @@ t_player *initPlayer(char *name)
   return(ret);
 }
 
+void movePlayer(t_player **player, char inp)
+{
+	if(inp == 'w')
+		(*player)->y--;
+	if(inp == 's')
+		(*player)->y++;
+	if(inp == 'a')
+		(*player)->x--;
+	if(inp == 'd')
+		(*player)->x++;
+}
+
 static char *promptName()
 {
   static char ret[20];
@@ -100,6 +87,45 @@ static char *promptName()
   printf("Hello, what is your player's name?\n");
   fgets(ret, 20, stdin);
   return(ret);
+}
+
+/* * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * MAP * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * */
+/* * * * * * * * * * * * * * * * * * * * * */
+
+int **initGrid(t_player *player)
+{
+	int **ret;
+	
+	if ((ret = (int **)malloc(sizeof(int*) * GRID_HEIGHT)) == NULL)
+		return(NULL);
+	for(int i = 0; i < GRID_HEIGHT; i++)
+	{
+		ret[i] = (int *)malloc(sizeof(int) * GRID_WIDTH);
+		for (int j = 0; j < GRID_WIDTH; j++)
+			ret[i][j] = 0;
+	}
+	ret[player->x][player->y] = 1;
+	return(ret);
+}
+
+void updateGrid(int ***grid, t_player **player, char inp)
+{
+	movePlayer(player, inp);
+	*grid[(*player)->x][(*player)->y] = 1;
+}
+
+// TODO: Update
+void printGrid(int **grid)
+{
+  for(int r = 0; r < GRID_HEIGHT; r++)
+  {
+    for(int c = 0; c < GRID_WIDTH; c++)
+      printf("%d ", grid[r][c]);
+    printf("\n");
+  }
 }
 
 /* * * * * * * * * * * * * * * * * * * * * */
@@ -120,11 +146,24 @@ static char *input(char *prompt)
 static char *processInput(char *prompt)
 {
   static char ret[20];
+  char *valid;
 
+  valid = "wasd";
   while(1)
   {
-    ret = input(prompt);
-    break
+    strcpy(ret, input(prompt));
+	if (ft_strlen(ret) != 2) 
+	{
+		printf("Invalid Input\n");
+		continue;
+	}
+	die(ret[0]);
+	if ((strchr(valid, ret[0])) == NULL)
+	{
+		printf("Invalid Input\n");
+		continue;
+	}
+	break;
   }
   return(ret);
 }
@@ -137,21 +176,22 @@ int render(int **grid, t_player *player)
   {
     printGrid(grid);
     inp = processInput("Move with W, A, S, and D");
-
-    printf("SIZE: %d", strlen(inp));
-    break;
+	updateGrid(&grid, &player, inp[0]);
+	break;
   }
   return(0);
 }
 
 int main(void) 
 {
-  int **grid;
-  t_player *player;
-
-  if (((grid = initGrid()) == NULL) || ((player = initPlayer(promptName())) == NULL))
-    return(-1);
-  render(grid, player);
-  garbage_collect(&grid, &player);
-  return 0;
+	int **grid;
+	t_player *player;
+	
+	if ((player = initPlayer(promptName())) == NULL)
+			return(-1);
+	if ((grid = initGrid(player)) == NULL)
+			return(-1);
+	render(grid, player);
+	garbage_collect(&grid, &player);
+	return 0;
 }
